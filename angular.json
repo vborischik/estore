@@ -27,6 +27,7 @@
               }
             ],
             "styles": [
+              "@angular/material/prebuilt-themes/azure-blue.css",
               "src/styles.css"
             ],
             "scripts": []
@@ -55,18 +56,33 @@
           },
           "defaultConfiguration": "production"
         },
-        "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "eStore:build:production"
-            },
-            "development": {
-              "buildTarget": "eStore:build:development"
-            }
+     "serve": {
+        "builder": "@angular-devkit/build-angular:dev-server",
+        "configurations": {
+          "production": {
+            "buildTarget": "eStore:build:production"
           },
-          "defaultConfiguration": "development"
+          "development": {
+            "buildTarget": "eStore:build:development",
+            "proxyConfig": "proxy.conf.json"
+          }
         },
+        "defaultConfiguration": "development"
+      }
+
+
+        // "serve": {
+        //   "builder": "@angular-devkit/build-angular:dev-server",
+        //   "configurations": {
+        //     "production": {
+        //       "buildTarget": "eStore:build:production"
+        //     },
+        //     "development": {
+        //       "buildTarget": "eStore:build:development"
+        //     }
+        //   },
+        //   "defaultConfiguration": "development"
+        // },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n"
         },
@@ -85,6 +101,8 @@
               }
             ],
             "styles": [
+              "@angular/material/prebuilt-themes/azure-blue.css",
+              "node_modules/primeicons/primeicons.css",
               "src/styles.css"
             ],
             "scripts": []

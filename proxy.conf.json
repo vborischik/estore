@@ -1,0 +1,8 @@
+{
+    "/api": {
+      "target": "http://estoreweb-test.us-east-1.elasticbeanstalk.com", 
+      "secure": false,
+      "changeOrigin": true,
+      "logLevel": "debug"
+    }
+  }

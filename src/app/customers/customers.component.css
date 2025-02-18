@@ -1,0 +1,19 @@
+.customer-container {
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  table {
+    width: 100%;
+  }
+  
+  mat-icon {
+    cursor: pointer;
+  }
+
+
+  .docs-example-viewer-wrapper{
+    border-radius: 12px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    padding: 10px;
+}
