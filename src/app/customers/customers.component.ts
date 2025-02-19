@@ -49,6 +49,7 @@ export class CustomersComponent implements OnInit {
   isLoading = false;
 
   @ViewChild('editDialogTemplate') editDialogTemplate: any;
+  @ViewChild('deleteDialogTemplate') deleteDialogTemplate: any;
 
   constructor(
     private customerService: CustomerService,
@@ -69,10 +70,15 @@ export class CustomersComponent implements OnInit {
   }
 
   loadCustomers(): void {
-    this.customerService.getAllCustomers().subscribe({
-      next: (data) => (this.customers = data),
-      error: (error) => console.error('Error fetching customers:', error),
-    });
+    this.isLoading = true;
+    this.customerService.getAllCustomers()
+      .pipe(
+        finalize(() => this.isLoading = false)
+      )
+      .subscribe({
+        next: (data) => (this.customers = data),
+        error: (error) => console.error('Error fetching customers:', error),
+      });
   }
 
   openEditDialog(customer: Customer): void {
@@ -135,7 +141,7 @@ export class CustomersComponent implements OnInit {
   editCustomer(customer: Customer): void {
     this.isLoading = true;
 
-    // Получаем актуальные данные перед открытием диалога
+
     this.customerService.getCustomerById(customer.customerID)
       .pipe(
         finalize(() => this.isLoading = false)
@@ -172,4 +178,77 @@ export class CustomersComponent implements OnInit {
   closeDialog(): void {
     this.dialogRef.close();
   }
+
+
+  deleteCustomer(customer: Customer): void {
+    this.dialogRef = this.dialog.open(this.deleteDialogTemplate, {
+      width: '300px',
+      disableClose: true
+    });
+
+    this.dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.isLoading = true;
+
+        this.customerService.deleteCustomer(customer.customerID)
+          .pipe(
+            finalize(() => this.isLoading = false)
+          )
+          .subscribe({
+            next: () => {
+              console.log('Customer deleted successfully');
+              this.loadCustomers();
+            },
+            error: (error) => {
+              console.error('Error deleting customer:', error);
+            }
+          });
+      }
+    });
+  }
+
+
+  openAddDialog(): void {
+    // Сбрасываем форму для нового клиента
+    this.editForm.reset();
+    // Скрываем поле ID, так как оно будет назначено автоматически
+    this.editForm.patchValue({
+      customerID: 0  // Временное значение, которое будет игнорироваться при создании
+    });
+
+    this.dialogRef = this.dialog.open(this.editDialogTemplate, {
+      width: '400px',
+      disableClose: true,
+      data: { isNewCustomer: true }
+    });
+
+    this.dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.addCustomer(result);
+      }
+    });
+  }
+
+// Метод для добавления нового клиента
+addCustomer(newCustomer: any): void {
+  this.isLoading = true;
+
+  // Удаляем ID из объекта перед отправкой
+  const { customerID, ...customerData } = newCustomer;
+
+  this.customerService.addCustomer(customerData)
+    .pipe(
+      finalize(() => this.isLoading = false)
+    )
+    .subscribe({
+      next: (response) => {
+        console.log('Customer added successfully', response);
+        this.loadCustomers();
+      },
+      error: (error) => {
+        console.error('Error adding customer:', error);
+      }
+    });
+}
+
 }

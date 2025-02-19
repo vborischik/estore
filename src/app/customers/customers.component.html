@@ -2,6 +2,15 @@
 <div class="customer-container">
   <h2>Customers</h2>
   <div class="docs-example-viewer-wrapper">
+    <button mat-raised-button color="primary" (click)="openAddDialog()">
+      <mat-icon>add</mat-icon> Add Customer
+    </button>
+
+    <div *ngIf="isLoading" class="loading-spinner">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+    <div *ngIf="!isLoading">
     <table mat-table [dataSource]="customers" class="mat-elevation-z8">
       <!-- ID Column -->
       <ng-container matColumnDef="customerID">
@@ -36,12 +45,16 @@
           <button mat-icon-button color="primary" (click)="editCustomer(customer)">
             <mat-icon>edit</mat-icon>
           </button>
+          <button mat-icon-button color="warn" (click)="deleteCustomer(customer)">
+            <mat-icon>delete</mat-icon>
+          </button>
         </td>
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
+  </div>
   </div>
 </div>
 
@@ -82,5 +95,18 @@
             (click)="dialogRef.close(editForm.value)">
       Save
     </button>
+  </div>
+</ng-template>
+
+
+<!-- В конце файла добавляем шаблон диалога удаления -->
+<ng-template #deleteDialogTemplate>
+  <h2 mat-dialog-title>Confirm Deletion</h2>
+  <div mat-dialog-content>
+    Are you sure you want to delete this customer?
+  </div>
+  <div mat-dialog-actions>
+    <button mat-button (click)="dialogRef.close(false)">Cancel</button>
+    <button mat-button color="warn" (click)="dialogRef.close(true)">Delete</button>
   </div>
 </ng-template>
