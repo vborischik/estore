@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 
 interface Customer {
@@ -31,22 +32,19 @@ interface Customer {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     ReactiveFormsModule
   ],
   templateUrl: './customers.component.html',
   styleUrls: ['./customers.component.css'],
 })
-
-
-
-
-
 export class CustomersComponent implements OnInit {
   customers: any[] = [];
   displayedColumns: string[] = ['customerID', 'firstName', 'lastName', 'phone', 'email', 'actions'];
   editForm: FormGroup;
   dialogRef!: MatDialogRef<any>;
   isLoading = false;
+  isDialogLoading = false; // Separate loading state for dialog operations
 
   @ViewChild('editDialogTemplate') editDialogTemplate: any;
   @ViewChild('deleteDialogTemplate') deleteDialogTemplate: any;
@@ -54,7 +52,8 @@ export class CustomersComponent implements OnInit {
   constructor(
     private customerService: CustomerService,
     private dialog: MatDialog,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private snackBar: MatSnackBar
   ) {
     this.editForm = this.fb.group({
       customerID: ['', Validators.required],
@@ -77,108 +76,81 @@ export class CustomersComponent implements OnInit {
       )
       .subscribe({
         next: (data) => (this.customers = data),
-        error: (error) => console.error('Error fetching customers:', error),
-      });
-  }
-
-  openEditDialog(customer: Customer): void {
-    this.isLoading = true;
-
-    // Получаем актуальные данные перед открытием диалога
-    this.customerService.getCustomerById(customer.customerID)
-      .pipe(
-        finalize(() => this.isLoading = false)
-      )
-      .subscribe({
-        next: (freshCustomer) => {
-          this.editForm.setValue({
-            customerID: freshCustomer.customerID,
-            firstName: freshCustomer.firstName,
-            lastName: freshCustomer.lastName,
-            phone: freshCustomer.phone,
-            email: freshCustomer.email,
-          });
-
-          this.dialogRef = this.dialog.open(this.editDialogTemplate, {
-            width: '400px',
-            disableClose: true,
-            data: freshCustomer
-          });
-
-          this.dialogRef.afterClosed().subscribe((result) => {
-            if (result) {
-              this.updateCustomer(result);
-            }
-          });
-        },
         error: (error) => {
-          console.error('Error fetching customer details:', error);
-          // Здесь можно добавить показ сообщения об ошибке пользователю
-        }
-      });
-  }
-
-
-  updateCustomer(updatedCustomer: Customer): void {
-    this.isLoading = true;
-
-    this.customerService.updateCustomer(updatedCustomer)
-      .pipe(
-        finalize(() => this.isLoading = false)
-      )
-      .subscribe({
-        next: (response) => {
-          console.log('Customer updated successfully', response);
-          this.loadCustomers();
+          console.error('Error fetching customers:', error);
+          this.showError('Failed to load customers');
         },
-        error: (error) => {
-          console.error('Error updating customer:', error);
-          // Здесь можно добавить показ сообщения об ошибке пользователю
-        }
       });
   }
 
   editCustomer(customer: Customer): void {
-    this.isLoading = true;
+    // First, immediately open dialog with table data to avoid visible delay
+    this.editForm.setValue({
+      customerID: customer.customerID,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      phone: customer.phone,
+      email: customer.email,
+    });
 
+    this.dialogRef = this.dialog.open(this.editDialogTemplate, {
+      width: '400px',
+      disableClose: true,
+      data: customer
+    });
 
+    // Then, fetch fresh data in the background
+    this.isDialogLoading = true;
     this.customerService.getCustomerById(customer.customerID)
       .pipe(
-        finalize(() => this.isLoading = false)
+        finalize(() => this.isDialogLoading = false)
       )
       .subscribe({
         next: (freshCustomer) => {
-          this.editForm.setValue({
-            customerID: freshCustomer.customerID,
-            firstName: freshCustomer.firstName,
-            lastName: freshCustomer.lastName,
-            phone: freshCustomer.phone,
-            email: freshCustomer.email,
-          });
-
-          this.dialogRef = this.dialog.open(this.editDialogTemplate, {
-            width: '400px',
-            disableClose: true,
-            data: freshCustomer
-          });
-
-          this.dialogRef.afterClosed().subscribe((result) => {
-            if (result) {
-              this.updateCustomer(result);
-            }
-          });
+          // Only update form if dialog is still open
+          if (this.dialogRef && this.dialogRef.getState() === 0) { // 0 = open
+            this.editForm.setValue({
+              customerID: freshCustomer.customerID,
+              firstName: freshCustomer.firstName,
+              lastName: freshCustomer.lastName,
+              phone: freshCustomer.phone,
+              email: freshCustomer.email,
+            });
+          }
         },
         error: (error) => {
           console.error('Error fetching customer details:', error);
-          // Здесь можно добавить показ сообщения об ошибке пользователю
+          this.showError('Failed to get latest customer data');
         }
       });
+
+    // We don't subscribe to afterClosed here anymore
+    // The submitForm method will handle the API call and dialog closure
   }
+
+  // updateCustomer(updatedCustomer: Customer): void {
+  //   this.isLoading = true;
+
+  //   this.customerService.updateCustomer(updatedCustomer)
+  //     .pipe(
+  //       finalize(() => this.isLoading = false)
+  //     )
+  //     .subscribe({
+  //       next: (response) => {
+
+  //         this.loadCustomers();
+  //         this.showSuccess('Customer updated successfully');
+  //       },
+  //       error: (error) => {
+
+  //         this.showError('Failed to update customer');
+  //       }
+  //     });
+  // }
 
   closeDialog(): void {
     this.dialogRef.close();
   }
-
 
   deleteCustomer(customer: Customer): void {
     this.dialogRef = this.dialog.open(this.deleteDialogTemplate, {
@@ -198,22 +170,21 @@ export class CustomersComponent implements OnInit {
             next: () => {
               console.log('Customer deleted successfully');
               this.loadCustomers();
+              this.showSuccess('Customer deleted successfully');
             },
             error: (error) => {
               console.error('Error deleting customer:', error);
+              this.showError('Failed to delete customer');
             }
           });
       }
     });
   }
 
-
   openAddDialog(): void {
-    // Сбрасываем форму для нового клиента
     this.editForm.reset();
-    // Скрываем поле ID, так как оно будет назначено автоматически
     this.editForm.patchValue({
-      customerID: 0  // Временное значение, которое будет игнорироваться при создании
+      customerID: 0
     });
 
     this.dialogRef = this.dialog.open(this.editDialogTemplate, {
@@ -222,33 +193,123 @@ export class CustomersComponent implements OnInit {
       data: { isNewCustomer: true }
     });
 
-    this.dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.addCustomer(result);
-      }
+    // We don't subscribe to afterClosed here anymore
+    // The submitForm method will handle the API call and dialog closure
+  }
+
+  // addCustomer(newCustomer: any): void {
+  //   this.isLoading = true;
+  //   const { customerID, ...customerData } = newCustomer;
+
+  //   this.customerService.addCustomer(customerData)
+  //     .pipe(
+  //       finalize(() => this.isLoading = false)
+  //     )
+  //     .subscribe({
+  //       next: (response) => {
+  //         console.log('Customer added successfully', response);
+  //         this.loadCustomers();
+  //         this.showSuccess('Customer added successfully');
+  //       },
+  //       error: (error) => {
+  //         console.error('Error adding customer:', error);
+  //         this.showError('Failed to add customer');
+  //       }
+  //     });
+  // }
+
+  showSuccess(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      panelClass: ['success-snackbar']
     });
   }
 
-// Метод для добавления нового клиента
-addCustomer(newCustomer: any): void {
-  this.isLoading = true;
-
-  // Удаляем ID из объекта перед отправкой
-  const { customerID, ...customerData } = newCustomer;
-
-  this.customerService.addCustomer(customerData)
-    .pipe(
-      finalize(() => this.isLoading = false)
-    )
-    .subscribe({
-      next: (response) => {
-        console.log('Customer added successfully', response);
-        this.loadCustomers();
-      },
-      error: (error) => {
-        console.error('Error adding customer:', error);
-      }
+  showError(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
     });
-}
+  }
+
+
+  submitForm(): void {
+    if (this.editForm.valid) {
+      const formData = this.editForm.value;
+      if (formData.customerID === 0) {
+        // For new customer
+        const { customerID, ...customerData } = formData;
+        this.isDialogLoading = true;
+
+        this.customerService.addCustomer(customerData)
+          .pipe(
+            finalize(() => this.isDialogLoading = false)
+          )
+          .subscribe({
+            next: (response) => {
+              // Check if the response has customerID (successful response)
+              if (response && response.customerID) {
+                console.log('Customer added successfully', response);
+                this.dialogRef.close();
+                this.loadCustomers();
+                this.showSuccess('Customer added successfully');
+              } else if (typeof response === 'string') {
+                // Handle string error response (e.g. "email or phone already used")
+                this.showError(response);
+              }
+            },
+            error: (error) => {
+              //console.error('Error adding customer:', error);
+              // Extract error message from the response
+              let errorMessage = 'Failed to add customer';
+              if (error.error && typeof error.error === 'string') {
+                errorMessage = error.error;
+              } else if (error.error && error.error.message) {
+                errorMessage = error.error.message;
+              } else if (error.message) {
+                errorMessage = error.message;
+              }
+              this.showError(errorMessage);
+            }
+          });
+      } else {
+        // For existing customer
+        this.isDialogLoading = true;
+
+        this.customerService.updateCustomer(formData)
+          .pipe(
+            finalize(() => this.isDialogLoading = false)
+          )
+          .subscribe({
+            next: (response) => {
+              // Check if the response has customerID (successful response)
+              if (response && response.customerID) {
+                //console.log('Customer updated successfully', response);
+                this.dialogRef.close();
+                this.loadCustomers();
+                this.showSuccess('Customer updated successfully');
+              } else if (typeof response === 'string') {
+                // Handle string error response (e.g. "Phone or Email already used")
+                this.showError(response);
+              }
+            },
+            error: (error) => {
+              //console.error('Error updating customer:', error);
+              // Extract error message from the response
+              let errorMessage = 'Failed to update customer';
+              if (error.error && typeof error.error === 'string') {
+                errorMessage = error.error;
+              } else if (error.error && error.error.message) {
+                errorMessage = error.error.message;
+              } else if (error.message) {
+                errorMessage = error.message;
+              }
+              this.showError(errorMessage);
+            }
+          });
+      }
+    }
+  }
+
 
 }

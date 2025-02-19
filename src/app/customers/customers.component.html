@@ -60,53 +60,55 @@
 
 <!-- Dialog Template -->
 <ng-template #editDialogTemplate>
-  <h2 mat-dialog-title>Edit Customer</h2>
+  <h2 mat-dialog-title>{{editForm.get('customerID')?.value === 0 ? 'Add' : 'Edit'}} Customer</h2>
   <div mat-dialog-content>
-    <div *ngIf="isLoading" class="loading-spinner">
+    <div *ngIf="isDialogLoading" class="loading-spinner">
       <mat-spinner diameter="40"></mat-spinner>
     </div>
 
-    <form [formGroup]="editForm" *ngIf="!isLoading">
+    <form [formGroup]="editForm" *ngIf="!isDialogLoading">
       <mat-form-field appearance="fill">
         <mat-label>First Name</mat-label>
         <input matInput formControlName="firstName" />
+        <mat-error *ngIf="editForm.get('firstName')?.hasError('required')">
+          First Name is required
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
         <mat-label>Last Name</mat-label>
         <input matInput formControlName="lastName" />
+        <mat-error *ngIf="editForm.get('lastName')?.hasError('required')">
+          Last Name is required
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
         <mat-label>Phone</mat-label>
         <input matInput formControlName="phone" />
+        <mat-error *ngIf="editForm.get('phone')?.hasError('required')">
+          Phone is required
+        </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
         <mat-label>Email</mat-label>
         <input matInput formControlName="email" />
+        <mat-error *ngIf="editForm.get('email')?.hasError('required')">
+          Email is required
+        </mat-error>
+        <mat-error *ngIf="editForm.get('email')?.hasError('email')">
+          Please enter a valid email address
+        </mat-error>
       </mat-form-field>
     </form>
   </div>
   <div mat-dialog-actions>
-    <button mat-button (click)="closeDialog()" [disabled]="isLoading">Cancel</button>
+    <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
     <button mat-button color="primary"
-            [disabled]="editForm.invalid || isLoading"
-            (click)="dialogRef.close(editForm.value)">
+            [disabled]="editForm.invalid || isDialogLoading"
+            (click)="submitForm()">
       Save
     </button>
-  </div>
-</ng-template>
-
-
-<!-- В конце файла добавляем шаблон диалога удаления -->
-<ng-template #deleteDialogTemplate>
-  <h2 mat-dialog-title>Confirm Deletion</h2>
-  <div mat-dialog-content>
-    Are you sure you want to delete this customer?
-  </div>
-  <div mat-dialog-actions>
-    <button mat-button (click)="dialogRef.close(false)">Cancel</button>
-    <button mat-button color="warn" (click)="dialogRef.close(true)">Delete</button>
   </div>
 </ng-template>
