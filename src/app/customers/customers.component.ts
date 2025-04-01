@@ -11,7 +11,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
-
+import { PageEvent } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 interface Customer {
   customerID: number;
   firstName: string;
@@ -33,7 +34,8 @@ interface Customer {
     MatInputModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    MatPaginatorModule
   ],
   templateUrl: './customers.component.html',
   styleUrls: ['./customers.component.css'],
@@ -45,6 +47,10 @@ export class CustomersComponent implements OnInit {
   dialogRef!: MatDialogRef<any>;
   isLoading = false;
   isDialogLoading = false; // Separate loading state for dialog operations
+  totalCount: number = 0;
+  pageSize: number = 5;
+  pageIndex: number = 0;
+
 
   @ViewChild('editDialogTemplate') editDialogTemplate: any;
   @ViewChild('deleteDialogTemplate') deleteDialogTemplate: any;
@@ -68,20 +74,39 @@ export class CustomersComponent implements OnInit {
     this.loadCustomers();
   }
 
+  // loadCustomers(): void {
+  //   this.isLoading = true;
+  //   this.customerService.getAllCustomers()
+  //     .pipe(
+  //       finalize(() => this.isLoading = false)
+  //     )
+  //     .subscribe({
+  //       next: (data) => (this.customers = data),
+  //       error: (error) => {
+  //         console.error('Error fetching customers:', error);
+  //         this.showError('Failed to load customers');
+  //       },
+  //     });
+  // }
+
   loadCustomers(): void {
-    this.isLoading = true;
-    this.customerService.getAllCustomers()
+    this.isLoading = true;  // Set loading to true before the call
+    this.customerService.getCustomers(this.pageIndex + 1, this.pageSize)
       .pipe(
-        finalize(() => this.isLoading = false)
+        finalize(() => this.isLoading = false)  // Always set loading to false
       )
       .subscribe({
-        next: (data) => (this.customers = data),
-        error: (error) => {
-          console.error('Error fetching customers:', error);
-          this.showError('Failed to load customers');
+        next: (response) => {
+          this.customers = response.customers;
+          this.totalCount = response.totalCount;
         },
+        error: (error) => {
+          console.error('Error on loading clients', error);
+          this.showError('Failed to load customers');  // Optional: show error message
+        }
       });
   }
+
 
   editCustomer(customer: Customer): void {
     // First, immediately open dialog with table data to avoid visible delay
@@ -232,6 +257,12 @@ export class CustomersComponent implements OnInit {
     });
   }
 
+
+  onPageChange(event: PageEvent): void {
+    this.pageSize = event.pageSize;
+    this.pageIndex = event.pageIndex;
+    this.loadCustomers(); // Заново загружаем данные с новыми параметрами
+  }
 
   submitForm(): void {
     if (this.editForm.valid) {

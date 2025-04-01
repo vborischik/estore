@@ -15,17 +15,19 @@
 
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './dashboard/dashboard.component';
-import { WelcomeComponent } from './welcome/welcome.component'; // Создай WelcomeComponent
+import { WelcomeComponent } from './welcome/welcome.component'; //
 
 export const routes: Routes = [
   {
     path: '',
-    component: DashboardComponent, // Dashboard как "рамка" для всех страниц
+    component: DashboardComponent,
     children: [
-      { path: '', component: WelcomeComponent }, // Страница по умолчанию
+      { path: '', component: WelcomeComponent },
       { path: 'customers', loadComponent: () => import('./customers/customers.component').then(m => m.CustomersComponent) },
+      { path: 'categories', loadComponent: () => import('./categories/categories.component').then(m => m.CategoriesComponent) },
       { path: 'products', loadComponent: () => import('./products/products.component').then(m => m.ProductsComponent) },
       { path: 'orders', loadComponent: () => import('./orders/orders.component').then(m => m.OrdersComponent) }
+
     ]
   }
 ];
