@@ -13,6 +13,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { PageEvent } from '@angular/material/paginator';
 import { MatPaginatorModule } from '@angular/material/paginator';
+
+
+
 interface Customer {
   customerID: number;
   firstName: string;
@@ -153,25 +156,7 @@ export class CustomersComponent implements OnInit {
     // The submitForm method will handle the API call and dialog closure
   }
 
-  // updateCustomer(updatedCustomer: Customer): void {
-  //   this.isLoading = true;
 
-  //   this.customerService.updateCustomer(updatedCustomer)
-  //     .pipe(
-  //       finalize(() => this.isLoading = false)
-  //     )
-  //     .subscribe({
-  //       next: (response) => {
-
-  //         this.loadCustomers();
-  //         this.showSuccess('Customer updated successfully');
-  //       },
-  //       error: (error) => {
-
-  //         this.showError('Failed to update customer');
-  //       }
-  //     });
-  // }
 
   closeDialog(): void {
     this.dialogRef.close();
@@ -222,26 +207,6 @@ export class CustomersComponent implements OnInit {
     // The submitForm method will handle the API call and dialog closure
   }
 
-  // addCustomer(newCustomer: any): void {
-  //   this.isLoading = true;
-  //   const { customerID, ...customerData } = newCustomer;
-
-  //   this.customerService.addCustomer(customerData)
-  //     .pipe(
-  //       finalize(() => this.isLoading = false)
-  //     )
-  //     .subscribe({
-  //       next: (response) => {
-  //         console.log('Customer added successfully', response);
-  //         this.loadCustomers();
-  //         this.showSuccess('Customer added successfully');
-  //       },
-  //       error: (error) => {
-  //         console.error('Error adding customer:', error);
-  //         this.showError('Failed to add customer');
-  //       }
-  //     });
-  // }
 
   showSuccess(message: string): void {
     this.snackBar.open(message, 'Close', {
@@ -262,6 +227,7 @@ export class CustomersComponent implements OnInit {
     this.pageSize = event.pageSize;
     this.pageIndex = event.pageIndex;
     this.loadCustomers(); // Заново загружаем данные с новыми параметрами
+
   }
 
   submitForm(): void {

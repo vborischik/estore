@@ -16,11 +16,13 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { WelcomeComponent } from './welcome/welcome.component'; //
+import { authGuardFn } from '@auth0/auth0-angular';
 
 export const routes: Routes = [
   {
     path: '',
     component: DashboardComponent,
+    canActivate: [authGuardFn],
     children: [
       { path: '', component: WelcomeComponent },
       { path: 'customers', loadComponent: () => import('./customers/customers.component').then(m => m.CustomersComponent) },

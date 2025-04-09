@@ -1,6 +1,6 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
+import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -13,7 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
-import { PageEvent } from '@angular/material/paginator';
+
 @Component({
   selector: 'app-categories',
   standalone: true,
@@ -34,14 +34,15 @@ import { PageEvent } from '@angular/material/paginator';
   templateUrl: './categories.component.html',
   styleUrls: ['./categories.component.css'],
 })
-export class CategoriesComponent implements OnInit {
-  categories: Category[] = [];
+export class CategoriesComponent implements OnInit, AfterViewInit {
+  // Use MatTableDataSource for built-in pagination
+  dataSource = new MatTableDataSource<Category>([]);
   displayedColumns: string[] = ['categoryID', 'categoryName', 'actions'];
   editForm: FormGroup;
   dialogRef!: MatDialogRef<any>;
   isLoading = false;
   isDialogLoading = false;
-  pageIndex: number = 0;
+
   // Pagination properties
   pageSize = 5;
   pageSizeOptions = [5, 10, 25, 50];
@@ -68,6 +69,13 @@ export class CategoriesComponent implements OnInit {
     this.loadCategories();
   }
 
+  ngAfterViewInit(): void {
+    // This is the key part - connect the paginator to the dataSource
+    // This must be in ngAfterViewInit since the view children are not available in ngOnInit
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
   loadCategories(): void {
     this.isLoading = true;
     this.categoryService.getAllCategories()
@@ -76,13 +84,8 @@ export class CategoriesComponent implements OnInit {
       )
       .subscribe({
         next: (categories) => {
-          this.categories = categories;
-
-          // Setup paginator and sort after data is loaded
-          setTimeout(() => {
-            this.paginator.length = this.categories.length;
-            this.paginator.pageSize = this.pageSize;
-          });
+          // Update the data source with the full dataset
+          this.dataSource.data = categories;
         },
         error: (error) => {
           console.error('Error loading categories', error);
@@ -192,12 +195,6 @@ export class CategoriesComponent implements OnInit {
       duration: 3000,
       panelClass: ['success-snackbar']
     });
-  }
-
-  onPageChange(event: PageEvent): void {
-    this.pageSize = event.pageSize;
-    this.pageIndex = event.pageIndex;
-    this.loadCategories(); // Reload categories with new pagination parameters
   }
 
   showError(message: string): void {

@@ -1,8 +1,12 @@
+<h1>{{ title }}</h1>
 
+<div *ngIf="auth.isAuthenticated$ | async; else loginTemplate">
+  <p>✅ Welcome, {{ (auth.user$ | async)?.name }}</p>
+  <button (click)="logout()">Logout</button>
+</div>
 
-
-
-<!-- <app-dashboard> </app-dashboard> -->
-
+<ng-template #loginTemplate>
+  <button (click)="auth.loginWithRedirect()">Login</button>
+</ng-template>
 
 <router-outlet></router-outlet>

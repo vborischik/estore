@@ -1,102 +1,94 @@
 <div class="category-container">
-    <h2>Categories</h2>
-    <div class="docs-example-viewer-wrapper">
-      <button mat-raised-button color="primary" (click)="openAddDialog()">
-        <mat-icon>add</mat-icon> Add Category
-      </button>
+  <h2>Categories</h2>
+  <div class="docs-example-viewer-wrapper">
+    <button mat-raised-button color="primary" (click)="openAddDialog()">
+      <mat-icon>add</mat-icon> Add Category
+    </button>
 
-      <div *ngIf="isLoading" class="loading-spinner">
-        <mat-spinner diameter="40"></mat-spinner>
-      </div>
+    <div *ngIf="isLoading" class="loading-spinner">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
 
-      <div *ngIf="!isLoading">
-        <table mat-table
-               [dataSource]="categories"
-               matSort
-               class="mat-elevation-z8">
-          <!-- ID Column -->
-          <ng-container matColumnDef="categoryID">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
-            <td mat-cell *matCellDef="let category"> {{category.categoryID}} </td>
-          </ng-container>
+    <div *ngIf="!isLoading">
+      <!-- The key change is here - using dataSource instead of categories -->
+      <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+        <!-- ID Column -->
+        <ng-container matColumnDef="categoryID">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
+          <td mat-cell *matCellDef="let category"> {{category.categoryID}} </td>
+        </ng-container>
 
-          <ng-container matColumnDef="categoryName">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Category Name </th>
-            <td mat-cell *matCellDef="let category"> {{category.categoryName}} </td>
-          </ng-container>
+        <ng-container matColumnDef="categoryName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Category Name </th>
+          <td mat-cell *matCellDef="let category"> {{category.categoryName}} </td>
+        </ng-container>
 
-          <!-- Actions Column -->
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef> Actions </th>
-            <td mat-cell *matCellDef="let category">
-              <button mat-icon-button color="primary" (click)="editCategory(category)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="deleteCategory(category)">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </td>
-          </ng-container>
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef> Actions </th>
+          <td mat-cell *matCellDef="let category">
+            <button mat-icon-button color="primary" (click)="editCategory(category)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deleteCategory(category)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
 
-        <mat-paginator
-          [length]="categories.length"
-          [pageSize]="pageSize"
-          [pageSizeOptions]="pageSizeOptions"
-          (page)="onPageChange($event)"
-          showFirstLastButtons>
-        </mat-paginator>
-      </div>
+      <!-- Connect the paginator to the dataSource -->
+      <mat-paginator
+        [pageSize]="pageSize"
+        [pageSizeOptions]="pageSizeOptions"
+        showFirstLastButtons>
+      </mat-paginator>
     </div>
   </div>
+</div>
 
-  <!-- Edit Dialog Template -->
-  <ng-template #editDialogTemplate>
-    <h2 mat-dialog-title>{{editForm.get('categoryID')?.value === 0 ? 'Add' : 'Edit'}} Category</h2>
-    <div mat-dialog-content>
-      <div *ngIf="isDialogLoading" class="loading-spinner">
-        <mat-spinner diameter="40"></mat-spinner>
-      </div>
-
-      <form [formGroup]="editForm" *ngIf="!isDialogLoading">
-        <mat-form-field appearance="fill">
-          <mat-label>Category Name</mat-label>
-          <input matInput formControlName="categoryName" />
-          <mat-error *ngIf="editForm.get('categoryName')?.hasError('required')">
-            Category Name is required
-          </mat-error>
-          <mat-error *ngIf="editForm.get('categoryName')?.hasError('maxlength')">
-            Category Name cannot exceed 50 characters
-          </mat-error>
-        </mat-form-field>
-      </form>
+<!-- Edit Dialog Template -->
+<ng-template #editDialogTemplate>
+  <h2 mat-dialog-title>{{editForm.get('categoryID')?.value === 0 ? 'Add' : 'Edit'}} Category</h2>
+  <div mat-dialog-content>
+    <div *ngIf="isDialogLoading" class="loading-spinner">
+      <mat-spinner diameter="40"></mat-spinner>
     </div>
-    <div mat-dialog-actions>
-      <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
-      <button mat-button color="primary"
-              [disabled]="editForm.invalid || isDialogLoading"
-              (click)="submitForm()">
-        Save
-      </button>
-    </div>
-  </ng-template>
 
-  <!-- Delete Confirmation Dialog Template -->
-  <ng-template #deleteDialogTemplate>
-    <h2 mat-dialog-title>Confirm Delete</h2>
-    <mat-dialog-content>
-      Are you sure you want to delete this category?
-    </mat-dialog-content>
-    <mat-dialog-actions>
-      <button mat-button [mat-dialog-close]="false">No</button>
-      <button mat-button [mat-dialog-close]="true" color="warn">Yes</button>
-    </mat-dialog-actions>
-  </ng-template>
-
-
-  <div *ngIf="isDialogLoading" class="loading-spinner">
-    <mat-spinner diameter="40"></mat-spinner>
+    <form [formGroup]="editForm" *ngIf="!isDialogLoading">
+      <mat-form-field appearance="fill">
+        <mat-label>Category Name</mat-label>
+        <input matInput formControlName="categoryName" />
+        <mat-error *ngIf="editForm.get('categoryName')?.hasError('required')">
+          Category Name is required
+        </mat-error>
+        <mat-error *ngIf="editForm.get('categoryName')?.hasError('maxlength')">
+          Category Name cannot exceed 50 characters
+        </mat-error>
+      </mat-form-field>
+    </form>
   </div>
+  <div mat-dialog-actions>
+    <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
+    <button mat-button color="primary"
+            [disabled]="editForm.invalid || isDialogLoading"
+            (click)="submitForm()">
+      Save
+    </button>
+  </div>
+</ng-template>
+
+<!-- Delete Confirmation Dialog Template -->
+<ng-template #deleteDialogTemplate>
+  <h2 mat-dialog-title>Confirm Delete</h2>
+  <mat-dialog-content>
+    Are you sure you want to delete this category?
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-button [mat-dialog-close]="false">No</button>
+    <button mat-button [mat-dialog-close]="true" color="warn">Yes</button>
+  </mat-dialog-actions>
+</ng-template>
