@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,11 +6,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { OrderService, Order, OrderDetail } from '../services/order.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { finalize, Observable, of } from 'rxjs';
+import { finalize, Observable, of, Subject } from 'rxjs';
+import { map, startWith } from 'rxjs/operators';
 import { PageEvent } from '@angular/material/paginator';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { HttpClient } from '@angular/common/http';
@@ -63,7 +64,7 @@ interface Customer {
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.css'],
 })
-export class OrdersComponent implements OnInit {
+export class OrdersComponent implements OnInit, OnDestroy {
   orders: Order[] = [];
   orderDetails: OrderDetail[] = [];
   displayedColumns: string[] = ['orderID', 'customerName', 'orderDate', 'orderStatus', 'actions'];
@@ -79,9 +80,17 @@ export class OrdersComponent implements OnInit {
   orderStatuses: OrderStatus[] = [];
   products: Product[] = [];
   customers: Customer[] = [];
+
+  // FormControls for filtering
+  customerFilterCtrl = new FormControl('');
+  productFilterCtrl = new FormControl('');
+
+  // Observable filtered results
   filteredProducts: Observable<Product[]> = of([]);
-  customerSearchCtrl = '';
-  productSearchCtrl = '';
+  filteredCustomers: Observable<Customer[]> = of([]);
+
+  // For cleanup
+  private _destroy$ = new Subject<void>();
 
   @ViewChild('editDialogTemplate') editDialogTemplate: any;
   @ViewChild('deleteDialogTemplate') deleteDialogTemplate: any;
@@ -108,6 +117,29 @@ export class OrdersComponent implements OnInit {
     this.loadOrderStatuses();
     this.loadProducts();
     this.loadCustomers();
+
+    // Setup filtered observables
+    this.setupFilteredProducts();
+    this.setupFilteredCustomers();
+  }
+
+  ngOnDestroy(): void {
+    this._destroy$.next();
+    this._destroy$.complete();
+  }
+
+  setupFilteredProducts(): void {
+    this.filteredProducts = this.productFilterCtrl.valueChanges.pipe(
+      startWith(''),
+      map(value => this.filterProducts(value || ''))
+    );
+  }
+
+  setupFilteredCustomers(): void {
+    this.filteredCustomers = this.customerFilterCtrl.valueChanges.pipe(
+      startWith(''),
+      map(value => this.filterCustomers(value || ''))
+    );
   }
 
   loadOrders(): void {
@@ -137,33 +169,26 @@ export class OrdersComponent implements OnInit {
             this.editForm.patchValue({ orderStatus: pendingStatus.id });
           }
 
-
-
           if (this.editForm.get('orderID')?.value === 0) {
             const pendingStatus = statuses.find(s => s.name.toLowerCase() === 'pending');
             if (pendingStatus) {
               this.editForm.patchValue({ orderStatus: pendingStatus.name });
             }
           }
-
         },
         error: (error) => {
           console.error('Error loading order statuses', error);
         }
       });
-
-
-
-
   }
-
-
 
   loadProducts(): void {
     this.http.get<Product[]>(`${environment.apiUrl}/products/list`)
       .subscribe({
         next: (products) => {
           this.products = products;
+          // Refresh filtered products when the source data changes
+          this.filteredProducts = of(this.filterProducts(this.productFilterCtrl.value || ''));
         },
         error: (error) => {
           console.error('Error loading products', error);
@@ -176,6 +201,8 @@ export class OrdersComponent implements OnInit {
       .subscribe({
         next: (customers) => {
           this.customers = customers;
+          // Refresh filtered customers when the source data changes
+          this.filteredCustomers = of(this.filterCustomers(this.customerFilterCtrl.value || ''));
         },
         error: (error) => {
           console.error('Error loading customers', error);
@@ -183,16 +210,17 @@ export class OrdersComponent implements OnInit {
       });
   }
 
-  filterProducts(): Product[] {
-    if (!this.productSearchCtrl) return this.products;
-    const filterValue = this.productSearchCtrl.toLowerCase();
+  // Updated filter methods to accept a parameter
+  filterProducts(filterValue: string): Product[] {
+    filterValue = filterValue.toLowerCase();
+    if (!filterValue) return this.products;
     return this.products.filter(product =>
       product.name.toLowerCase().includes(filterValue));
   }
 
-  filterCustomers(): Customer[] {
-    if (!this.customerSearchCtrl) return this.customers;
-    const filterValue = this.customerSearchCtrl.toLowerCase();
+  filterCustomers(filterValue: string): Customer[] {
+    filterValue = filterValue.toLowerCase();
+    if (!filterValue) return this.customers;
     return this.customers.filter(customer =>
       customer.name.toLowerCase().includes(filterValue));
   }

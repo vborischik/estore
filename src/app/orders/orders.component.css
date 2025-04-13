@@ -79,4 +79,54 @@ mat-form-field {
   background: white;
   z-index: 1;
 }
+/* orders.component.css */
+.order-container {
+  padding: 20px;
+}
 
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.mat-mdc-row:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.order-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.customer-select, .product-select {
+  width: 100%;
+}
+
+.quantity-input {
+  width: 80px;
+}
+
+.add-item-form {
+  margin: 16px 0;
+}
+
+/* Custom styles for the search input */
+.search-input {
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  padding-bottom: 4px;
+  font-size: 14px;
+}
+
+/* Prevent overlap issues with search input */
+.mat-select-panel {
+  margin-top: 40px !important;
+}
+
+/* Make sure dialog is large enough */
+::ng-deep .mat-mdc-dialog-container {
+  max-width: 95vw !important;
+}
