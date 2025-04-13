@@ -13,6 +13,15 @@ import { finalize } from 'rxjs';
 import { PageEvent } from '@angular/material/paginator';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { ProductService, Product, ProductResponse } from '../services/product.service';
+import { CategoryService, Category } from '../services/category.service';
+import { MatSelectModule } from '@angular/material/select';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../enviroments/environment';
+
+interface CategoryListItem {
+  id: number;
+  name: string;
+}
 
 @Component({
   selector: 'app-products',
@@ -28,7 +37,8 @@ import { ProductService, Product, ProductResponse } from '../services/product.se
     MatProgressSpinnerModule,
     MatSnackBarModule,
     ReactiveFormsModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatSelectModule
   ],
   templateUrl: './products.component.html',
   styleUrls: ['./products.component.css'],
@@ -44,19 +54,23 @@ export class ProductsComponent implements OnInit {
   totalCount: number = 0;
   pageSize: number = 10;
   pageIndex: number = 0;
+  categories: CategoryListItem[] = [];
 
   @ViewChild('editDialogTemplate') editDialogTemplate!: any;
   @ViewChild('deleteDialogTemplate') deleteDialogTemplate!: any;
 
   constructor(
     private productService: ProductService,
+    private categoryService: CategoryService,
     private fb: FormBuilder,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
     this.loadProducts();
+    this.loadCategories();
   }
 
   loadProducts(): void {
@@ -75,6 +89,19 @@ export class ProductsComponent implements OnInit {
       });
   }
 
+  loadCategories(): void {
+    this.http.get<CategoryListItem[]>(`${environment.apiUrl}/categories/list`)
+      .subscribe({
+        next: (categories) => {
+          this.categories = categories;
+        },
+        error: (error) => {
+          console.error('Error loading categories:', error);
+          this.showError('Failed to load categories');
+        }
+      });
+  }
+
   onPageChange(event: PageEvent): void {
     this.pageSize = event.pageSize;
     this.pageIndex = event.pageIndex;
@@ -85,7 +112,7 @@ export class ProductsComponent implements OnInit {
     this.editForm = this.fb.group({
       productID: [0],
       productName: ['', Validators.required],
-      categoryID: [1, Validators.required],
+      categoryID: ['', Validators.required],
       price: [0],
       stockQuantity: [0],
       imageURL: [''],
@@ -170,6 +197,11 @@ export class ProductsComponent implements OnInit {
           this.showError('Failed to submit product');
         }
       });
+  }
+
+  getCategoryName(categoryId: number): string {
+    const category = this.categories.find(c => c.id === categoryId);
+    return category ? category.name : '';
   }
 
   showSuccess(message: string): void {

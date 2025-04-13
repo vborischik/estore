@@ -1,148 +1,152 @@
 <div class="product-container">
-    <h2>Products</h2>
-    <div class="docs-example-viewer-wrapper">
-      <button mat-raised-button color="primary" (click)="openAddDialog()">
-        <mat-icon>add</mat-icon> Add Product
-      </button>
+  <h2>Products</h2>
+  <div class="docs-example-viewer-wrapper">
+    <button mat-raised-button color="primary" (click)="openAddDialog()">
+      <mat-icon>add</mat-icon> Add Product
+    </button>
 
-      <div *ngIf="isLoading" class="loading-spinner">
-        <mat-spinner diameter="40"></mat-spinner>
-      </div>
-
-      <div *ngIf="!isLoading">
-        <table mat-table [dataSource]="products" class="mat-elevation-z8">
-
-          <!-- ID -->
-          <ng-container matColumnDef="productID">
-            <th mat-header-cell *matHeaderCellDef> ID </th>
-            <td mat-cell *matCellDef="let product"> {{product.productID}} </td>
-          </ng-container>
-
-          <!-- Name -->
-          <ng-container matColumnDef="productName">
-            <th mat-header-cell *matHeaderCellDef> Name </th>
-            <td mat-cell *matCellDef="let product"> {{product.productName}} </td>
-          </ng-container>
-
-          <!-- Price -->
-          <ng-container matColumnDef="price">
-            <th mat-header-cell *matHeaderCellDef> Price </th>
-            <td mat-cell *matCellDef="let product"> {{product.price | currency}} </td>
-          </ng-container>
-
-          <!-- Stock -->
-          <ng-container matColumnDef="stockQuantity">
-            <th mat-header-cell *matHeaderCellDef> Stock </th>
-            <td mat-cell *matCellDef="let product"> {{product.stockQuantity}} </td>
-          </ng-container>
-
-          <!-- SKU -->
-          <ng-container matColumnDef="sku">
-            <th mat-header-cell *matHeaderCellDef> SKU </th>
-            <td mat-cell *matCellDef="let product"> {{product.sku}} </td>
-          </ng-container>
-
-          <!-- UPC -->
-          <ng-container matColumnDef="upc">
-            <th mat-header-cell *matHeaderCellDef> UPC </th>
-            <td mat-cell *matCellDef="let product"> {{product.upc}} </td>
-          </ng-container>
-
-          <!-- Actions -->
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef> Actions </th>
-            <td mat-cell *matCellDef="let product">
-              <button mat-icon-button color="primary" (click)="editProduct(product)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="deleteProduct(product)">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
-
-
-      </div>
+    <div *ngIf="isLoading" class="loading-spinner">
+      <mat-spinner diameter="40"></mat-spinner>
     </div>
-    <mat-paginator [length]="totalCount"
-    [pageSize]="pageSize"
-    [pageSizeOptions]="[5, 10, 25, 50]"
-    (page)="onPageChange($event)">
-</mat-paginator>
+
+    <div *ngIf="!isLoading">
+      <table mat-table [dataSource]="products" class="mat-elevation-z8">
+
+        <!-- ID -->
+        <ng-container matColumnDef="productID">
+          <th mat-header-cell *matHeaderCellDef> ID </th>
+          <td mat-cell *matCellDef="let product"> {{product.productID}} </td>
+        </ng-container>
+
+        <!-- Name -->
+        <ng-container matColumnDef="productName">
+          <th mat-header-cell *matHeaderCellDef> Name </th>
+          <td mat-cell *matCellDef="let product"> {{product.productName}} </td>
+        </ng-container>
+
+        <!-- Price -->
+        <ng-container matColumnDef="price">
+          <th mat-header-cell *matHeaderCellDef> Price </th>
+          <td mat-cell *matCellDef="let product"> {{product.price | currency}} </td>
+        </ng-container>
+
+        <!-- Stock -->
+        <ng-container matColumnDef="stockQuantity">
+          <th mat-header-cell *matHeaderCellDef> Stock </th>
+          <td mat-cell *matCellDef="let product"> {{product.stockQuantity}} </td>
+        </ng-container>
+
+        <!-- SKU -->
+        <ng-container matColumnDef="sku">
+          <th mat-header-cell *matHeaderCellDef> SKU </th>
+          <td mat-cell *matCellDef="let product"> {{product.sku}} </td>
+        </ng-container>
+
+        <!-- UPC -->
+        <ng-container matColumnDef="upc">
+          <th mat-header-cell *matHeaderCellDef> UPC </th>
+          <td mat-cell *matCellDef="let product"> {{product.upc}} </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef> Actions </th>
+          <td mat-cell *matCellDef="let product">
+            <button mat-icon-button color="primary" (click)="editProduct(product)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deleteProduct(product)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
   </div>
+  <mat-paginator [length]="totalCount"
+  [pageSize]="pageSize"
+  [pageSizeOptions]="[5, 10, 25, 50]"
+  (page)="onPageChange($event)">
+</mat-paginator>
+</div>
 
-  <!-- Edit Dialog -->
-  <ng-template #editDialogTemplate>
-    <h2 mat-dialog-title>{{editForm.get('productID')?.value === 0 ? 'Add' : 'Edit'}} Product</h2>
-    <div mat-dialog-content>
-      <div *ngIf="isDialogLoading" class="loading-spinner">
-        <mat-spinner diameter="40"></mat-spinner>
-      </div>
-
-      <form [formGroup]="editForm" *ngIf="!isDialogLoading">
-        <mat-form-field appearance="fill">
-          <mat-label>Product Name</mat-label>
-          <input matInput formControlName="productName" />
-          <mat-error *ngIf="editForm.get('productName')?.hasError('required')">
-            Product Name is required
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Price</mat-label>
-          <input matInput type="number" formControlName="price" />
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Stock Quantity</mat-label>
-          <input matInput type="number" formControlName="stockQuantity" />
-        </mat-form-field>
-
-
-        <mat-form-field appearance="fill">
-          <mat-label>Category</mat-label>
-          <input matInput type="text" formControlName="categoryID" />
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>SKU</mat-label>
-          <input matInput formControlName="sku" />
-          <mat-error *ngIf="editForm.get('sku')?.hasError('required')">
-            SKU is required
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>UPC</mat-label>
-          <input matInput formControlName="upc" />
-          <mat-error *ngIf="editForm.get('upc')?.hasError('required')">
-            UPC is required
-          </mat-error>
-        </mat-form-field>
-      </form>
+<!-- Edit Dialog -->
+<ng-template #editDialogTemplate>
+  <h2 mat-dialog-title>{{editForm.get('productID')?.value === 0 ? 'Add' : 'Edit'}} Product</h2>
+  <div mat-dialog-content>
+    <div *ngIf="isDialogLoading" class="loading-spinner">
+      <mat-spinner diameter="40"></mat-spinner>
     </div>
-    <div mat-dialog-actions>
-      <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
-      <button mat-button color="primary"
-              [disabled]="editForm.invalid || isDialogLoading"
-              (click)="submitForm()">
-        Save
-      </button>
-    </div>
-  </ng-template>
 
-  <!-- Delete Dialog -->
-  <ng-template #deleteDialogTemplate>
-    <h2 mat-dialog-title>Confirm Deletion</h2>
-    <mat-dialog-content>
-      Are you sure you want to delete this product?
-    </mat-dialog-content>
-    <mat-dialog-actions>
-      <button mat-button (click)="dialogRef.close(false)">Cancel</button>
-      <button mat-button color="warn" (click)="dialogRef.close(true)">Delete</button>
-    </mat-dialog-actions>
-  </ng-template>
+    <form [formGroup]="editForm" *ngIf="!isDialogLoading">
+      <mat-form-field appearance="fill">
+        <mat-label>Product Name</mat-label>
+        <input matInput formControlName="productName" />
+        <mat-error *ngIf="editForm.get('productName')?.hasError('required')">
+          Product Name is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Price</mat-label>
+        <input matInput type="number" formControlName="price" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Stock Quantity</mat-label>
+        <input matInput type="number" formControlName="stockQuantity" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Category</mat-label>
+        <mat-select formControlName="categoryID">
+          <mat-option *ngFor="let category of categories" [value]="category.id">
+            {{category.name}}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="editForm.get('categoryID')?.hasError('required')">
+          Category is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>SKU</mat-label>
+        <input matInput formControlName="sku" />
+        <mat-error *ngIf="editForm.get('sku')?.hasError('required')">
+          SKU is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>UPC</mat-label>
+        <input matInput formControlName="upc" />
+        <mat-error *ngIf="editForm.get('upc')?.hasError('required')">
+          UPC is required
+        </mat-error>
+      </mat-form-field>
+    </form>
+  </div>
+  <div mat-dialog-actions>
+    <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
+    <button mat-button color="primary"
+            [disabled]="editForm.invalid || isDialogLoading"
+            (click)="submitForm()">
+      Save
+    </button>
+  </div>
+</ng-template>
+
+<!-- Delete Dialog -->
+<ng-template #deleteDialogTemplate>
+  <h2 mat-dialog-title>Confirm Deletion</h2>
+  <mat-dialog-content>
+    Are you sure you want to delete this product?
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-button (click)="dialogRef.close(false)">Cancel</button>
+    <button mat-button color="warn" (click)="dialogRef.close(true)">Delete</button>
+  </mat-dialog-actions>
+</ng-template>

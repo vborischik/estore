@@ -15,6 +15,11 @@ export interface CategoryResponse {
   categories: Category[];
 }
 
+export interface CategoryListItem {
+  CategoryID: number;
+  CategoryName: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -24,8 +29,8 @@ export class CategoryService {
   constructor(private http: HttpClient) {}
 
   // Keep this method for backward compatibility if needed
-  getAllCategories(): Observable<Category[]> {
-    return this.http.get<Category[]>(this.apiUrl);
+  getAllCategories(): Observable<CategoryListItem[]> {
+    return this.http.get<CategoryListItem[]>(this.apiUrl);
   }
 
   // Add new method that handles pagination and returns proper response format
@@ -35,6 +40,11 @@ export class CategoryService {
       .set('pageSize', pageSize.toString());
 
     return this.http.get<CategoryResponse>(this.apiUrl, { params });
+  }
+
+
+  getCategoryDropdown(): Observable<CategoryListItem[]> {
+    return this.http.get<CategoryListItem[]>(`${this.apiUrl}/list`);
   }
 
   getCategoryById(id: number): Observable<Category> {
