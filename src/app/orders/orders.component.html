@@ -18,11 +18,6 @@
           <td mat-cell *matCellDef="let order"> {{order.orderID}} </td>
         </ng-container>
 
-        <ng-container matColumnDef="customerID">
-          <th mat-header-cell *matHeaderCellDef class="hidden-column"> Customer ID </th>
-          <td mat-cell *matCellDef="let order" class="hidden-column"> {{order.customerID}} </td>
-        </ng-container>
-
         <ng-container matColumnDef="customerName">
           <th mat-header-cell *matHeaderCellDef> Customer Name </th>
           <td mat-cell *matCellDef="let order"> {{order.customerName}} </td>
@@ -42,9 +37,6 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef> Actions </th>
           <td mat-cell *matCellDef="let order">
-            <button mat-icon-button color="primary" (click)="showOrderDetails(order)">
-              <mat-icon>visibility</mat-icon>
-            </button>
             <button mat-icon-button color="primary" (click)="editOrder(order)">
               <mat-icon>edit</mat-icon>
             </button>
@@ -59,6 +51,7 @@
       </table>
     </div>
   </div>
+
   <mat-paginator
     [length]="totalCount"
     [pageSize]="pageSize"
@@ -67,182 +60,148 @@
   </mat-paginator>
 </div>
 
-<!-- Order Edit Dialog Template -->
-<ng-template #editDialogTemplate>
+<!-- Dialog for Add/Edit Order -->
+<ng-template #editDialogTemplate class="orderfrom">
   <h2 mat-dialog-title>{{editForm.get('orderID')?.value === 0 ? 'Add' : 'Edit'}} Order</h2>
   <div mat-dialog-content>
     <div *ngIf="isDialogLoading" class="loading-spinner">
       <mat-spinner diameter="40"></mat-spinner>
     </div>
 
-    <form [formGroup]="editForm" *ngIf="!isDialogLoading">
-      <mat-form-field appearance="fill">
-        <mat-label>Customer ID</mat-label>
-        <input matInput formControlName="customerID" type="number" />
+    <form [formGroup]="editForm" *ngIf="!isDialogLoading" class="order-form">
+      <!-- Hidden customerID field -->
+      <input type="hidden" formControlName="customerID">
+
+      <!-- Customer Dropdown -->
+      <mat-form-field appearance="fill" class="customer-select">
+        <mat-label>Customer</mat-label>
+        <mat-select [value]="editForm.get('customerID')?.value" (selectionChange)="onCustomerSelected($event.value)">
+          <mat-option>
+            <input
+              matInput
+              placeholder="Search customers..."
+              [(ngModel)]="customerSearchCtrl"
+              [ngModelOptions]="{standalone: true}"
+            />
+          </mat-option>
+          <mat-option *ngFor="let customer of filterCustomers()" [value]="customer.id">
+            {{customer.name}}
+          </mat-option>
+        </mat-select>
         <mat-error *ngIf="editForm.get('customerID')?.hasError('required')">
-          Customer ID is required
+          Customer is required
         </mat-error>
       </mat-form-field>
 
+      <!-- Date picker with calendar -->
       <mat-form-field appearance="fill">
         <mat-label>Order Date</mat-label>
-        <input matInput formControlName="orderDate" type="datetime-local" />
-        <mat-error *ngIf="editForm.get('orderDate')?.hasError('required')">
-          Order Date is required
-        </mat-error>
+        <input matInput [matDatepicker]="picker" formControlName="orderDate">
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        <mat-error *ngIf="editForm.get('orderDate')?.invalid">Order date is required</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Order Time</mat-label>
+        <input matInput type="time" formControlName="orderTime" />
       </mat-form-field>
 
       <mat-form-field appearance="fill">
         <mat-label>Order Status</mat-label>
-        <input matInput formControlName="orderStatus" />
-        <mat-error *ngIf="editForm.get('orderStatus')?.hasError('required')">
-          Order Status is required
-        </mat-error>
+        <mat-select formControlName="orderStatus">
+          <mat-option *ngFor="let status of orderStatuses" [value]="status.name">
+            {{status.name}}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="editForm.get('orderStatus')?.invalid">Order status is required</mat-error>
       </mat-form-field>
     </form>
+
+    <h3>Order Items</h3>
+    <table mat-table [dataSource]="orderDetails" class="mat-elevation-z2">
+      <!-- Product -->
+      <ng-container matColumnDef="productID">
+        <th mat-header-cell *matHeaderCellDef>Product</th>
+        <td mat-cell *matCellDef="let detail">
+          <mat-form-field appearance="fill" class="product-select">
+            <mat-label>Select Product</mat-label>
+            <mat-select [(value)]="detail.productID" (selectionChange)="onProductSelected(detail, $event.value)">
+              <mat-option>
+                <input
+                  matInput
+                  placeholder="Search products..."
+                  [(ngModel)]="productSearchCtrl"
+                  [ngModelOptions]="{standalone: true}"
+                />
+              </mat-option>
+              <mat-option *ngFor="let product of filterProducts()" [value]="product.id">
+                {{product.name}}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </td>
+      </ng-container>
+
+      <!-- Quantity -->
+      <ng-container matColumnDef="quantity">
+        <th mat-header-cell *matHeaderCellDef>Quantity</th>
+        <td mat-cell *matCellDef="let detail">
+          <mat-form-field appearance="fill" class="quantity-input">
+            <input matInput [(ngModel)]="detail.quantity" type="number" min="1" />
+          </mat-form-field>
+        </td>
+      </ng-container>
+
+      <!-- UnitPrice -->
+      <ng-container matColumnDef="unitPrice">
+        <th mat-header-cell *matHeaderCellDef>Unit Price</th>
+        <td mat-cell *matCellDef="let detail">
+          {{detail.unitPrice | currency}}
+        </td>
+      </ng-container>
+
+      <!-- Total - New column -->
+      <ng-container matColumnDef="total">
+        <th mat-header-cell *matHeaderCellDef>Total</th>
+        <td mat-cell *matCellDef="let detail">
+          {{detail.quantity * detail.unitPrice | currency}}
+        </td>
+      </ng-container>
+
+      <!-- Actions -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let detail">
+          <button mat-icon-button color="warn" (click)="removeDetail(detail)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="detailsDisplayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: detailsDisplayedColumns;"></tr>
+    </table>
+
+    <!-- Add new item -->
+    <div class="add-item-form">
+      <button mat-stroked-button color="primary" (click)="addNewDetail()">
+        <mat-icon>add</mat-icon> Add Item
+      </button>
+    </div>
   </div>
+
   <div mat-dialog-actions>
-    <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
-    <button mat-button color="primary"
-            [disabled]="editForm.invalid || isDialogLoading"
-            (click)="submitOrderForm()">
-      Save
-    </button>
+    <button mat-button (click)="closeDialog()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="saveFullOrder()">Save</button>
   </div>
 </ng-template>
 
-<!-- Order Delete Dialog Template -->
+<!-- Confirm Delete Dialog -->
 <ng-template #deleteDialogTemplate>
   <h2 mat-dialog-title>Confirm Deletion</h2>
   <mat-dialog-content>
     Are you sure you want to delete this order?
-  </mat-dialog-content>
-  <mat-dialog-actions>
-    <button mat-button (click)="dialogRef.close(false)">Cancel</button>
-    <button mat-button color="warn" (click)="dialogRef.close(true)">Delete</button>
-  </mat-dialog-actions>
-</ng-template>
-
-<!-- Order Details Dialog Template -->
-<ng-template #orderDetailsDialogTemplate>
-  <h2 mat-dialog-title>Order Details for Order #{{selectedOrder?.orderID}}</h2>
-  <div mat-dialog-content>
-    <div class="header-actions">
-      <button mat-raised-button color="primary" (click)="openAddDetailDialog()">
-        <mat-icon>add</mat-icon> Add Item
-      </button>
-    </div>
-
-    <div *ngIf="isDialogLoading" class="loading-spinner">
-      <mat-spinner diameter="40"></mat-spinner>
-    </div>
-
-    <div *ngIf="!isDialogLoading">
-      <table mat-table [dataSource]="orderDetails" class="mat-elevation-z8">
-        <ng-container matColumnDef="orderDetailID">
-          <th mat-header-cell *matHeaderCellDef> ID </th>
-          <td mat-cell *matCellDef="let detail"> {{detail.orderDetailID}} </td>
-        </ng-container>
-
-        <ng-container matColumnDef="productID">
-          <th mat-header-cell *matHeaderCellDef class="hidden-column"> Product ID </th>
-          <td mat-cell *matCellDef="let detail" class="hidden-column"> {{detail.productID}} </td>
-        </ng-container>
-
-        <ng-container matColumnDef="productName">
-          <th mat-header-cell *matHeaderCellDef> Product </th>
-          <td mat-cell *matCellDef="let detail"> {{detail.productName}} </td>
-        </ng-container>
-
-        <ng-container matColumnDef="quantity">
-          <th mat-header-cell *matHeaderCellDef> Quantity </th>
-          <td mat-cell *matCellDef="let detail"> {{detail.quantity}} </td>
-        </ng-container>
-
-        <ng-container matColumnDef="price">
-          <th mat-header-cell *matHeaderCellDef> Unit Price </th>
-          <td mat-cell *matCellDef="let detail"> {{ detail.price !== null && detail.price !== undefined ? (detail.price | currency) : '—'}}
-          </td>
-
-        </ng-container>
-
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef> Actions </th>
-          <td mat-cell *matCellDef="let detail">
-            <button mat-icon-button color="primary" (click)="editOrderDetail(detail)">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button color="warn" (click)="deleteOrderDetail(detail)">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="detailsDisplayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: detailsDisplayedColumns;"></tr>
-      </table>
-    </div>
-  </div>
-  <div mat-dialog-actions>
-    <button mat-button (click)="closeDialog()">Close</button>
-  </div>
-</ng-template>
-
-<!-- Order Detail Edit Dialog Template -->
-<ng-template #editDetailDialogTemplate>
-  <h2 mat-dialog-title>{{editDetailForm.get('orderDetailID')?.value === 0 ? 'Add' : 'Edit'}} Order Item</h2>
-  <div mat-dialog-content>
-    <div *ngIf="isDialogLoading" class="loading-spinner">
-      <mat-spinner diameter="40"></mat-spinner>
-    </div>
-
-    <form [formGroup]="editDetailForm" *ngIf="!isDialogLoading">
-      <mat-form-field appearance="fill">
-        <mat-label>Product ID</mat-label>
-        <input matInput formControlName="productID" type="number" />
-        <mat-error *ngIf="editDetailForm.get('productID')?.hasError('required')">
-          Product ID is required
-        </mat-error>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Quantity</mat-label>
-        <input matInput formControlName="quantity" type="number" min="1" />
-        <mat-error *ngIf="editDetailForm.get('quantity')?.hasError('required')">
-          Quantity is required
-        </mat-error>
-        <mat-error *ngIf="editDetailForm.get('quantity')?.hasError('min')">
-          Quantity must be at least 1
-        </mat-error>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Unit Price</mat-label>
-        <input matInput formControlName="Price" type="number" min="0" step="0.01" />
-        <mat-error *ngIf="editDetailForm.get('Price')?.hasError('required')">
-          Unit Price is required
-        </mat-error>
-        <mat-error *ngIf="editDetailForm.get('Price')?.hasError('min')">
-          Unit Price must be at least 0
-        </mat-error>
-      </mat-form-field>
-    </form>
-  </div>
-  <div mat-dialog-actions>
-    <button mat-button (click)="closeDialog()" [disabled]="isDialogLoading">Cancel</button>
-    <button mat-button color="primary"
-            [disabled]="editDetailForm.invalid || isDialogLoading"
-            (click)="submitDetailForm()">
-      Save
-    </button>
-  </div>
-</ng-template>
-
-<!-- Order Detail Delete Dialog Template -->
-<ng-template #deleteDetailDialogTemplate>
-  <h2 mat-dialog-title>Confirm Deletion</h2>
-  <mat-dialog-content>
-    Are you sure you want to delete this order item?
   </mat-dialog-content>
   <mat-dialog-actions>
     <button mat-button (click)="dialogRef.close(false)">Cancel</button>

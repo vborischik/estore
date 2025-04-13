@@ -9,6 +9,8 @@ export interface Order {
   customerName: string;
   orderDate: string;
   orderStatus: string;
+  totalAmount?: number;
+  orderDetails?: OrderDetail[];
 }
 
 export interface OrderDetail {
@@ -17,7 +19,8 @@ export interface OrderDetail {
   productID: number;
   productName: string;
   quantity: number;
-  price: number;
+  unitPrice: number;
+  sku: string;
 }
 
 export interface OrderResponse {
@@ -25,11 +28,30 @@ export interface OrderResponse {
   orders: Order[];
 }
 
+export interface OrderStatus {
+  id: number;
+  name: string;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  price?: number;
+  sku?: string;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class OrderService {
   readonly apiUrl = `${environment.apiUrl}/orders`;
+  readonly productsUrl = `${environment.apiUrl}/products`;
+  readonly customersUrl = `${environment.apiUrl}/customers`;
 
   constructor(private http: HttpClient) {}
 
@@ -50,7 +72,6 @@ export class OrderService {
     return this.http.post<Order>(this.apiUrl, order);
   }
 
-  // Adding the missing updateOrder method
   updateOrder(order: Order): Observable<Order> {
     return this.http.put<Order>(`${this.apiUrl}/${order.orderID}`, order);
   }
@@ -74,5 +95,24 @@ export class OrderService {
 
   deleteOrderDetail(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/details/${id}`);
+  }
+
+  // Order statuses
+  getOrderStatuses(): Observable<OrderStatus[]> {
+    return this.http.get<OrderStatus[]>(`${this.apiUrl}/statuses`);
+  }
+
+  // Products
+  getProductList(): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.productsUrl}/list`);
+  }
+
+  getProductDetails(productId: number): Observable<Product> {
+    return this.http.get<Product>(`${this.productsUrl}/${productId}`);
+  }
+
+  // Customers
+  getCustomerList(): Observable<Customer[]> {
+    return this.http.get<Customer[]>(`${this.customersUrl}/list`);
   }
 }

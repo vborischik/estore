@@ -10,10 +10,33 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { finalize } from 'rxjs';
+import { finalize, Observable, of } from 'rxjs';
 import { PageEvent } from '@angular/material/paginator';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
+import { environment } from '../../enviroments/environment';
+
+interface OrderStatus {
+  id: number;
+  name: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+interface Customer {
+  id: number;
+  name: string;
+}
 
 @Component({
   selector: 'app-orders',
@@ -29,7 +52,13 @@ import { HttpClient } from '@angular/common/http';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     ReactiveFormsModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    FormsModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatSelectModule,
+    MatAutocompleteModule,
+    NgxMatSelectSearchModule
   ],
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.css'],
@@ -37,10 +66,9 @@ import { HttpClient } from '@angular/common/http';
 export class OrdersComponent implements OnInit {
   orders: Order[] = [];
   orderDetails: OrderDetail[] = [];
-  displayedColumns: string[] = ['orderID', 'customerID', 'customerName', 'orderDate', 'orderStatus', 'actions'];
-  detailsDisplayedColumns: string[] = ['orderDetailID', 'productID', 'productName', 'quantity', 'price', 'actions'];
+  displayedColumns: string[] = ['orderID', 'customerName', 'orderDate', 'orderStatus', 'actions'];
+  detailsDisplayedColumns: string[] = ['productID', 'quantity', 'unitPrice', 'total', 'actions'];
   editForm: FormGroup;
-  editDetailForm: FormGroup;
   dialogRef!: MatDialogRef<any>;
   isLoading = false;
   isDialogLoading = false;
@@ -48,12 +76,15 @@ export class OrdersComponent implements OnInit {
   pageSize: number = 5;
   pageIndex: number = 0;
   selectedOrder: Order | null = null;
+  orderStatuses: OrderStatus[] = [];
+  products: Product[] = [];
+  customers: Customer[] = [];
+  filteredProducts: Observable<Product[]> = of([]);
+  customerSearchCtrl = '';
+  productSearchCtrl = '';
 
   @ViewChild('editDialogTemplate') editDialogTemplate: any;
   @ViewChild('deleteDialogTemplate') deleteDialogTemplate: any;
-  @ViewChild('orderDetailsDialogTemplate') orderDetailsDialogTemplate: any;
-  @ViewChild('editDetailDialogTemplate') editDetailDialogTemplate: any;
-  @ViewChild('deleteDetailDialogTemplate') deleteDetailDialogTemplate: any;
 
   constructor(
     private orderService: OrderService,
@@ -65,29 +96,24 @@ export class OrdersComponent implements OnInit {
     this.editForm = this.fb.group({
       orderID: [0, Validators.required],
       customerID: ['', Validators.required],
-      orderDate: ['', Validators.required],
-      orderStatus: ['', Validators.required]
-    });
-
-    this.editDetailForm = this.fb.group({
-      orderDetailID: [0],
-      orderID: ['', Validators.required],
-      productID: ['', Validators.required],
-      quantity: ['', [Validators.required, Validators.min(1)]],
-      price: [0, [Validators.required, Validators.min(0)]]
+      customerName: ['', Validators.required],
+      orderDate: [null, Validators.required],
+      orderStatus: ['', Validators.required],
+      orderTime: ['00:00']
     });
   }
 
   ngOnInit(): void {
     this.loadOrders();
+    this.loadOrderStatuses();
+    this.loadProducts();
+    this.loadCustomers();
   }
 
   loadOrders(): void {
     this.isLoading = true;
     this.orderService.getOrders(this.pageIndex + 1, this.pageSize)
-      .pipe(
-        finalize(() => this.isLoading = false)
-      )
+      .pipe(finalize(() => this.isLoading = false))
       .subscribe({
         next: (response) => {
           this.orders = response.orders;
@@ -100,12 +126,81 @@ export class OrdersComponent implements OnInit {
       });
   }
 
+  loadOrderStatuses(): void {
+    this.http.get<OrderStatus[]>(`${environment.apiUrl}/orders/statuses`)
+      .subscribe({
+        next: (statuses) => {
+          this.orderStatuses = statuses;
+
+          const pendingStatus = this.orderStatuses.find(s => s.name.toLowerCase() === 'pending');
+          if (pendingStatus && this.editForm.get('orderID')?.value === 0) {
+            this.editForm.patchValue({ orderStatus: pendingStatus.id });
+          }
+
+
+
+          if (this.editForm.get('orderID')?.value === 0) {
+            const pendingStatus = statuses.find(s => s.name.toLowerCase() === 'pending');
+            if (pendingStatus) {
+              this.editForm.patchValue({ orderStatus: pendingStatus.name });
+            }
+          }
+
+        },
+        error: (error) => {
+          console.error('Error loading order statuses', error);
+        }
+      });
+
+
+
+
+  }
+
+
+
+  loadProducts(): void {
+    this.http.get<Product[]>(`${environment.apiUrl}/products/list`)
+      .subscribe({
+        next: (products) => {
+          this.products = products;
+        },
+        error: (error) => {
+          console.error('Error loading products', error);
+        }
+      });
+  }
+
+  loadCustomers(): void {
+    this.http.get<Customer[]>(`${environment.apiUrl}/customers/list`)
+      .subscribe({
+        next: (customers) => {
+          this.customers = customers;
+        },
+        error: (error) => {
+          console.error('Error loading customers', error);
+        }
+      });
+  }
+
+  filterProducts(): Product[] {
+    if (!this.productSearchCtrl) return this.products;
+    const filterValue = this.productSearchCtrl.toLowerCase();
+    return this.products.filter(product =>
+      product.name.toLowerCase().includes(filterValue));
+  }
+
+  filterCustomers(): Customer[] {
+    if (!this.customerSearchCtrl) return this.customers;
+    const filterValue = this.customerSearchCtrl.toLowerCase();
+    return this.customers.filter(customer =>
+      customer.name.toLowerCase().includes(filterValue));
+  }
+
   loadOrderDetails(orderID: number): void {
     this.isDialogLoading = true;
     this.orderService.getOrderDetails(orderID)
-      .pipe(
-        finalize(() => this.isDialogLoading = false)
-      )
+      .pipe(finalize(() => this.isDialogLoading = false))
       .subscribe({
         next: (details) => {
           this.orderDetails = details;
@@ -118,66 +213,165 @@ export class OrdersComponent implements OnInit {
   }
 
   editOrder(order: Order): void {
-    // First, immediately open dialog with table data
     this.editForm.setValue({
       orderID: order.orderID,
       customerID: order.customerID,
-      orderDate: order.orderDate,
-      orderStatus: order.orderStatus
+      customerName: order.customerName,
+      orderDate: new Date(order.orderDate),
+      orderStatus: order.orderStatus,
+      orderTime: this.formatTime(new Date(order.orderDate))
     });
 
     this.dialogRef = this.dialog.open(this.editDialogTemplate, {
-      width: '400px',
+      minWidth: '1900px',
       disableClose: true,
       data: order
     });
 
-    // Then, fetch fresh data in the background
-    this.isDialogLoading = true;
-
-    // Load the order data first
-    this.orderService.getOrderById(order.orderID)
-      .pipe(
-        finalize(() => {
-          // After order data is loaded, load details
-          this.loadOrderDetails(order.orderID);
-        })
-      )
-      .subscribe({
-        next: (freshOrder) => {
-          // Only update form if dialog is still open
-          if (this.dialogRef && this.dialogRef.getState() === 0) {
-            this.editForm.setValue({
-              orderID: freshOrder.orderID,
-              customerID: freshOrder.customerID,
-              orderDate: freshOrder.orderDate,
-              orderStatus: freshOrder.orderStatus
-            });
-          }
-        },
-        error: (error) => {
-          console.error('Error fetching order details:', error);
-          this.showError('Failed to get latest order data');
-          this.isDialogLoading = false; // Ensure loading state is cleared on error
-        }
-      });
-  }
-
-  showOrderDetails(order: Order): void {
     this.selectedOrder = order;
-
-    this.dialogRef = this.dialog.open(this.orderDetailsDialogTemplate, {
-      width: '800px',
-      disableClose: false,
-      data: order
-    });
-
-    // Load order details when dialog opens
     this.loadOrderDetails(order.orderID);
   }
 
-  closeDialog(): void {
-    this.dialogRef.close();
+  formatTime(date: Date): string {
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  }
+
+  openAddDialog(): void {
+    this.editForm.reset();
+
+    const now = new Date();
+
+    const pendingStatus = this.orderStatuses.find(s => s.name.toLowerCase() === 'pending');
+    this.editForm.patchValue({
+      orderID: 0,
+      orderDate: now,
+      orderTime: this.formatTime(now),
+      orderStatus: pendingStatus?.name || ''
+    });
+
+    this.orderDetails = [];
+
+    this.dialogRef = this.dialog.open(this.editDialogTemplate, {
+      minWidth: '1900px',
+      disableClose: true,
+      data: { isNewOrder: true }
+    });
+  }
+
+  addNewDetail(): void {
+    const newDetail: OrderDetail = {
+      orderDetailID: 0,
+      orderID: this.editForm.get('orderID')?.value || 0,
+      productID: 0,
+      productName: '',
+      quantity: 1,
+      unitPrice: 0,
+      sku: ''
+    };
+    this.orderDetails = [...this.orderDetails, newDetail]; // Create a new array to trigger change detection
+  }
+
+  removeDetail(detail: OrderDetail): void {
+    this.orderDetails = this.orderDetails.filter(d => d !== detail);
+  }
+
+  getProductName(productId: number): string {
+    const product = this.products.find(p => p.id === productId);
+    return product ? product.name : '';
+  }
+
+  onProductSelected(detail: OrderDetail, productId: number): void {
+    detail.productID = productId;
+    const product = this.products.find(p => p.id === productId);
+    if (product) {
+      detail.productName = product.name;
+      detail.unitPrice = product.price; // Set the price from the product data
+    }
+  }
+
+  onCustomerSelected(customerId: number): void {
+    const customer = this.customers.find(c => c.id === customerId);
+    if (customer) {
+      this.editForm.patchValue({
+        customerID: customer.id,
+        customerName: customer.name
+      });
+    }
+  }
+
+  saveFullOrder(): void {
+    if (this.editForm.invalid) {
+      this.markFormGroupTouched(this.editForm);
+      return;
+    }
+
+    // Check if order has at least one product
+    if (this.orderDetails.length === 0) {
+      this.showError('Please add at least one product to the order');
+      return;
+    }
+
+    const formValue = this.editForm.value;
+    const date: Date = formValue.orderDate instanceof Date ? new Date(formValue.orderDate) : new Date();
+
+    // Split the time string and set the hours and minutes
+    if (formValue.orderTime) {
+      const [hours, minutes] = formValue.orderTime.split(':').map(Number);
+      date.setHours(hours);
+      date.setMinutes(minutes);
+    }
+
+    const order = {
+      ...formValue,
+      orderDate: date.toISOString()
+    };
+
+    this.isDialogLoading = true;
+
+    const save$ = order.orderID === 0
+      ? this.orderService.createOrder(order)
+      : this.orderService.updateOrder(order);
+
+    save$.pipe(finalize(() => this.isDialogLoading = false)).subscribe({
+      next: (savedOrder: Order) => {
+        this.dialogRef.close();
+        this.loadOrders();
+        this.showSuccess('Order saved successfully');
+
+        // Use the orderID from the saved order
+        const orderID = savedOrder.orderID;
+
+        // Set the orderID for all details before saving them
+        this.orderDetails.forEach(detail => detail.orderID = orderID);
+
+        // Continue saving details with updated orderIDs
+        const detailPromises = this.orderDetails.map(detail => {
+          if (detail.orderDetailID === 0) {
+            return this.orderService.addOrderDetail(orderID, detail).toPromise();
+          } else {
+            return this.orderService.updateOrderDetail(detail).toPromise();
+          }
+        });
+
+        Promise.all(detailPromises).catch(err => {
+          console.error(err);
+          this.showError('Some order details may not have been saved');
+        });
+      },
+      error: (err) => {
+        console.error(err);
+        this.showError('Failed to save order');
+      }
+    });
+  }
+
+  markFormGroupTouched(formGroup: FormGroup) {
+    Object.values(formGroup.controls).forEach(control => {
+      control.markAsTouched();
+      if ((control as any).controls) {
+        this.markFormGroupTouched(control as FormGroup);
+      }
+    });
   }
 
   deleteOrder(order: Order): void {
@@ -189,11 +383,8 @@ export class OrdersComponent implements OnInit {
     this.dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.isLoading = true;
-
         this.orderService.deleteOrder(order.orderID)
-          .pipe(
-            finalize(() => this.isLoading = false)
-          )
+          .pipe(finalize(() => this.isLoading = false))
           .subscribe({
             next: () => {
               this.loadOrders();
@@ -208,223 +399,14 @@ export class OrdersComponent implements OnInit {
     });
   }
 
-  openAddDialog(): void {
-    this.editForm.reset();
-    this.editForm.patchValue({
-      orderID: 0
-    });
-
-    this.dialogRef = this.dialog.open(this.editDialogTemplate, {
-      width: '400px',
-      disableClose: true,
-      data: { isNewOrder: true }
-    });
-  }
-
-  openAddDetailDialog(): void {
-    if (!this.selectedOrder) return;
-
-    this.editDetailForm.reset();
-    this.editDetailForm.patchValue({
-      orderDetailID: 0,
-      orderID: this.selectedOrder.orderID
-    });
-
-    this.dialogRef = this.dialog.open(this.editDetailDialogTemplate, {
-      width: '400px',
-      disableClose: true,
-      data: { isNewDetail: true }
-    });
-  }
-
-  editOrderDetail(detail: OrderDetail): void {
-    this.editDetailForm.setValue({
-      orderDetailID: detail.orderDetailID,
-      orderID: detail.orderID,
-      productID: detail.productID,
-      quantity: detail.quantity,
-      price: detail.price
-    });
-
-    this.dialogRef = this.dialog.open(this.editDetailDialogTemplate, {
-      width: '400px',
-      disableClose: true,
-      data: detail
-    });
-  }
-
-  deleteOrderDetail(detail: OrderDetail): void {
-    this.dialogRef = this.dialog.open(this.deleteDetailDialogTemplate, {
-      width: '300px',
-      disableClose: true
-    });
-
-    this.dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.isDialogLoading = true;
-
-        this.orderService.deleteOrderDetail(detail.orderDetailID)
-          .pipe(
-            finalize(() => this.isDialogLoading = false)
-          )
-          .subscribe({
-            next: () => {
-              if (this.selectedOrder) {
-                this.loadOrderDetails(this.selectedOrder.orderID);
-              }
-              this.showSuccess('Order detail deleted successfully');
-            },
-            error: (error) => {
-              console.error('Error deleting order detail:', error);
-              this.showError('Failed to delete order detail');
-            }
-          });
-      }
-    });
-  }
-
-  submitOrderForm(): void {
-    if (this.editForm.valid) {
-      const formData = this.editForm.value;
-      this.isDialogLoading = true;
-
-      if (formData.orderID === 0) {
-        // For new order
-        const { orderID, ...orderData } = formData;
-
-        this.orderService.createOrder(orderData)
-          .pipe(
-            finalize(() => this.isDialogLoading = false)
-          )
-          .subscribe({
-            next: (response) => {
-              if (response && response.orderID) {
-                this.dialogRef.close();
-                this.loadOrders();
-                this.showSuccess('Order added successfully');
-              } else if (typeof response === 'string') {
-                this.showError(response);
-              }
-            },
-            error: (error) => {
-              let errorMessage = 'Failed to add order';
-              if (error.error && typeof error.error === 'string') {
-                errorMessage = error.error;
-              } else if (error.error && error.error.message) {
-                errorMessage = error.error.message;
-              } else if (error.message) {
-                errorMessage = error.message;
-              }
-              this.showError(errorMessage);
-            }
-          });
-      } else {
-        // For existing order
-        // Since updateOrder is not available in the provided service, we need to implement it
-        // We'll use HTTP PUT directly here as a workaround
-        const order = formData as Order;
-
-        this.http.put<Order>(`${this.orderService.apiUrl}/${order.orderID}`, order)
-          .pipe(
-            finalize(() => this.isDialogLoading = false)
-          )
-          .subscribe({
-            next: (response) => {
-              if (response && response.orderID) {
-                this.dialogRef.close();
-                this.loadOrders();
-                this.showSuccess('Order updated successfully');
-              } else if (typeof response === 'string') {
-                this.showError(response);
-              }
-            },
-            error: (error) => {
-              let errorMessage = 'Failed to update order';
-              if (error.error && typeof error.error === 'string') {
-                errorMessage = error.error;
-              } else if (error.error && error.error.message) {
-                errorMessage = error.error.message;
-              } else if (error.message) {
-                errorMessage = error.message;
-              }
-              this.showError(errorMessage);
-            }
-          });
-      }
-    }
-  }
-
-  submitDetailForm(): void {
-    if (this.editDetailForm.valid) {
-      const formData = this.editDetailForm.value;
-      this.isDialogLoading = true;
-
-      if (formData.orderDetailID === 0) {
-        // For new order detail
-        const { orderDetailID, ...detailData } = formData;
-
-        this.orderService.addOrderDetail(formData.orderID, detailData)
-          .pipe(
-            finalize(() => this.isDialogLoading = false)
-          )
-          .subscribe({
-            next: (response) => {
-              if (response && response.orderDetailID) {
-                this.dialogRef.close();
-                if (this.selectedOrder) {
-                  this.loadOrderDetails(this.selectedOrder.orderID);
-                }
-                this.showSuccess('Order detail added successfully');
-              } else if (typeof response === 'string') {
-                this.showError(response);
-              }
-            },
-            error: (error) => {
-              let errorMessage = 'Failed to add order detail';
-              if (error.error && typeof error.error === 'string') {
-                errorMessage = error.error;
-              } else if (error.error && error.error.message) {
-                errorMessage = error.error.message;
-              } else if (error.message) {
-                errorMessage = error.message;
-              }
-              this.showError(errorMessage);
-            }
-          });
-      } else {
-        // For existing order detail
-        this.orderService.updateOrderDetail(formData)
-          .pipe(
-            finalize(() => this.isDialogLoading = false)
-          )
-          .subscribe({
-            next: (response) => {
-              this.dialogRef.close();
-              if (this.selectedOrder) {
-                this.loadOrderDetails(this.selectedOrder.orderID);
-              }
-              this.showSuccess('Order detail updated successfully');
-            },
-            error: (error) => {
-              let errorMessage = 'Failed to update order detail';
-              if (error.error && typeof error.error === 'string') {
-                errorMessage = error.error;
-              } else if (error.error && error.error.message) {
-                errorMessage = error.error.message;
-              } else if (error.message) {
-                errorMessage = error.message;
-              }
-              this.showError(errorMessage);
-            }
-          });
-      }
-    }
-  }
-
   onPageChange(event: PageEvent): void {
     this.pageSize = event.pageSize;
     this.pageIndex = event.pageIndex;
     this.loadOrders();
+  }
+
+  closeDialog(): void {
+    this.dialogRef.close();
   }
 
   showSuccess(message: string): void {

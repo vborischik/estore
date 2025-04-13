@@ -4,14 +4,14 @@ import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { CategoryService, Category } from '../services/category.service';
+import { CategoryService, Category, CategoryResponse } from '../services/category.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 
 @Component({
@@ -35,7 +35,7 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
   styleUrls: ['./categories.component.css'],
 })
 export class CategoriesComponent implements OnInit, AfterViewInit {
-  // Use MatTableDataSource for built-in pagination
+  // Use MatTableDataSource for data manipulation
   dataSource = new MatTableDataSource<Category>([]);
   displayedColumns: string[] = ['categoryID', 'categoryName', 'actions'];
   editForm: FormGroup;
@@ -44,7 +44,9 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
   isDialogLoading = false;
 
   // Pagination properties
-  pageSize = 5;
+  totalCount: number = 0;
+  pageSize = 10;
+  pageIndex = 0;
   pageSizeOptions = [5, 10, 25, 50];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -70,28 +72,32 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // This is the key part - connect the paginator to the dataSource
-    // This must be in ngAfterViewInit since the view children are not available in ngOnInit
-    this.dataSource.paginator = this.paginator;
+    // Connect sort to dataSource
     this.dataSource.sort = this.sort;
   }
 
   loadCategories(): void {
     this.isLoading = true;
-    this.categoryService.getAllCategories()
+    this.categoryService.getCategories(this.pageIndex + 1, this.pageSize)
       .pipe(
         finalize(() => this.isLoading = false)
       )
       .subscribe({
-        next: (categories) => {
-          // Update the data source with the full dataset
-          this.dataSource.data = categories;
+        next: (response) => {
+          this.dataSource.data = response.categories;
+          this.totalCount = response.totalCount;
         },
         error: (error) => {
           console.error('Error loading categories', error);
           this.showError('Failed to load categories');
         }
       });
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.pageSize = event.pageSize;
+    this.pageIndex = event.pageIndex;
+    this.loadCategories();
   }
 
   openAddDialog(): void {

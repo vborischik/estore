@@ -1,30 +1,25 @@
-<mat-sidenav-container class="example-container">
+
+
+
+
+  <mat-sidenav-container class="example-container">
     <mat-sidenav #sidenav mode="side" opened class="example-sidenav">
-      <mat-nav-list>
-        <a mat-list-item routerLink="/customers">Customers</a>
-        <a mat-list-item routerLink="/categories">Categories</a>
-        <a mat-list-item routerLink="/products">Products</a>
-        <a mat-list-item routerLink="/orders">Orders</a>
-        <!-- <a mat-list-item routerLink="/profile">Profile</a> -->
+      <mat-nav-list *ngIf="menuLoaded">
+        <a *ngIf="hasMenu('Customers')" mat-list-item routerLink="/customers">Customers</a>
+        <a *ngIf="hasMenu('Categories')" mat-list-item routerLink="/categories">Categories</a>
+        <a *ngIf="hasMenu('Products')" mat-list-item routerLink="/products">Products</a>
+        <a *ngIf="hasMenu('Orders')" mat-list-item routerLink="/orders">Orders</a>
       </mat-nav-list>
     </mat-sidenav>
 
     <mat-sidenav-content class="example-sidenav-content">
       <mat-toolbar color="primary">
-        <button mat-icon-button (click)="sidenav.toggle()">
+        <button mat-icon-button (click)="toggleSidenav()">
           <!-- <mat-icon>menu</mat-icon> -->
         </button>
-        <!-- <span>Dashboard</span> -->
       </mat-toolbar>
-
       <div class="content">
-
-
-
-
-
-
-         <router-outlet></router-outlet>
+        <router-outlet></router-outlet>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>

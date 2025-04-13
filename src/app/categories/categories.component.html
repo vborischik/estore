@@ -10,7 +10,6 @@
     </div>
 
     <div *ngIf="!isLoading">
-      <!-- The key change is here - using dataSource instead of categories -->
       <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
         <!-- ID Column -->
         <ng-container matColumnDef="categoryID">
@@ -18,6 +17,7 @@
           <td mat-cell *matCellDef="let category"> {{category.categoryID}} </td>
         </ng-container>
 
+        <!-- Name Column -->
         <ng-container matColumnDef="categoryName">
           <th mat-header-cell *matHeaderCellDef mat-sort-header> Category Name </th>
           <td mat-cell *matCellDef="let category"> {{category.categoryName}} </td>
@@ -30,9 +30,11 @@
             <button mat-icon-button color="primary" (click)="editCategory(category)">
               <mat-icon>edit</mat-icon>
             </button>
-            <button mat-icon-button color="warn" (click)="deleteCategory(category)">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <button mat-icon-button color="warn"
+            [disabled]="!category.isRemoveAllowed"
+            (click)="deleteCategory(category)">
+      <mat-icon>delete</mat-icon>
+    </button>
           </td>
         </ng-container>
 
@@ -40,10 +42,12 @@
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
 
-      <!-- Connect the paginator to the dataSource -->
+      <!-- Paginator with server-side pagination -->
       <mat-paginator
+        [length]="totalCount"
         [pageSize]="pageSize"
         [pageSizeOptions]="pageSizeOptions"
+        (page)="onPageChange($event)"
         showFirstLastButtons>
       </mat-paginator>
     </div>

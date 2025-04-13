@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders,HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../enviroments/environment';
 
@@ -7,6 +7,7 @@ export interface Category {
   categoryID: number;
   categoryName: string;
   description?: string;
+  isRemoveAllowed?: boolean;
 }
 
 export interface CategoryResponse {
@@ -22,15 +23,17 @@ export class CategoryService {
 
   constructor(private http: HttpClient) {}
 
+  // Keep this method for backward compatibility if needed
   getAllCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(this.apiUrl);
   }
 
+  // Add new method that handles pagination and returns proper response format
   getCategories(pageNumber: number = 1, pageSize: number = 10): Observable<CategoryResponse> {
     const params = new HttpParams()
       .set('pageNumber', pageNumber.toString())
       .set('pageSize', pageSize.toString());
-    
+
     return this.http.get<CategoryResponse>(this.apiUrl, { params });
   }
 
@@ -50,3 +53,6 @@ export class CategoryService {
     return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 }
+
+
+
